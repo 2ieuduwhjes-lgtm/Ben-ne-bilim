@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J.A.R.V.I.S. Mark X - Bay Lewzon OS</title>
+    <style>
+        :root {
+            --primary-color: #00f3ff;
+            --primary-glow: rgba(0, 243, 255, 0.35);
+            --bg-color: #020813;
+            --panel-bg: rgba(4, 18, 38, 0.8);
+            --accent-red: #ff003c;
+            --reactor-color: #00f3ff;
+            --reactor-glow: rgba(0, 243, 255, 0.5);
+            --vignette-glow: rgba(0, 243, 255, 0.15);
+        }
+
+        /* DİNAMİK SİSTEM MODLARI */
+        body.alarm-mode {
+            --primary-color: #ff003c;
+            --primary-glow: rgba(255, 0, 60, 0.5);
+            --bg-color: #0d0004;
+            --panel-bg: rgba(38, 4, 12, 0.85);
+            --vignette-glow: rgba(255, 0, 60, 0.3);
+        }
+
+        body.stealth-mode {
+            --primary-color: #00ff66;
+            --primary-glow: rgba(0, 255, 102, 0.3);
+            --bg-color: #000a04;
+            --panel-bg: rgba(2, 28, 12, 0.85);
+            --vignette-glow: rgba(0, 255, 102, 0.2);
+        }
+
+        body.matrix-mode {
+            --primary-color: #02ff41;
+            --primary-glow: rgba(2, 255, 65, 0.4);
+            --bg-color: #000d03;
+            --panel-bg: rgba(0, 20, 5, 0.85);
+            --vignette-glow: rgba(2, 255, 65, 0.25);
+        }
+
+        body.party-mode {
+            animation: rgbBg 4s infinite linear;
+        }
+
+        @keyframes rgbBg {
+            0% { --primary-color: #ff0055; --primary-glow: rgba(255,0,85,0.5); --vignette-glow: rgba(255,0,85,0.3); }
+            25% { --primary-color: #00f3ff; --primary-glow: rgba(0,243,255,0.5); --vignette-glow: rgba(0,243,255,0.3); }
+            50% { --primary-color: #cc00ff; --primary-glow: rgba(204,0,255,0.5); --vignette-glow: rgba(204,0,255,0.3); }
+            75% { --primary-color: #ffcc00; --primary-glow: rgba(255,204,0,0.5); --vignette-glow: rgba(255,204,0,0.3); }
+            100% { --primary-color: #ff0055; --primary-glow: rgba(255,0,85,0.5); --vignette-glow: rgba(255,0,85,0.3); }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Consolas', 'Segoe UI', 'Courier New', monospace;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 15px;
+            transition: background 0.5s ease, color 0.5s ease;
+            position: relative;
+            box-shadow: inset 0 0 100px var(--vignette-glow);
+        }
+
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(0, 243, 255, 0.02) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 255, 255, 0.01), rgba(0, 0, 0, 0.01));
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+            z-index: 99;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            box-shadow: 0 4px 20px var(--primary-glow);
+            z-index: 10;
+            backdrop-filter: blur(8px);
+        }
+
+        .sys-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            letter-spacing: 4px;
+            text-shadow: 0 0 12px var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sys-title::before {
+            content: "◈";
+            animation: blink 1.5s infinite alternate;
+        }
+
+        @keyframes blink { 0% { opacity: 0.2; } 100% { opacity: 1; } }
+
+        .sys-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .hud-grid {
+            display: grid;
+            grid-template-columns: 260px 1fr 280px;
+            gap: 15px;
+            flex-grow: 1;
+            margin-top: 15px;
+            margin-bottom: 15px;
+            height: calc(100vh - 240px);
+        }
+
+        .hud-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--primary-color);
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 0 15px var(--primary-glow);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .panel-header {
+            font-size: 0.8rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+            border-bottom: 1px dashed var(--primary-color);
+            padding-bottom: 4px;
+            text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .telemetry-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .telemetry-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+        }
+
+        .bar-bg {
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 3px;
+            overflow: hidden;
+            border: 1px solid var(--primary-color);
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: var(--primary-color);
+            width: 50%;
+            transition: width 0.4s ease, background-color 0.4s ease;
+            box-shadow: 0 0 8px var(--primary-color);
+        }
+
+        .center-hud {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .reactor-wrapper {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #visualizer-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .arc-reactor {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 3px dashed var(--reactor-color);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 35px var(--reactor-glow), inset 0 0 35px var(--reactor-glow);
+            animation: rotateOuter 15s linear infinite;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            z-index: 2;
+        }
+
+        .arc-inner-ring {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            border: 4px solid var(--reactor-color);
+            border-top: 4px solid transparent;
+            position: absolute;
+            animation: rotateInner 4s linear infinite reverse;
+            transition: all 0.4s ease;
+        }
+
+        .arc-core {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: var(--reactor-color);
+            box-shadow: 0 0 40px var(--reactor-color), 0 0 80px #fff;
+            animation: pulseCore 2s ease-in-out infinite alternate;
+            transition: all 0.4s ease;
+        }
+
+        .arc-reactor.state-idle {
+            --reactor-color: var(--primary-color);
+            --reactor-glow: var(--primary-glow);
+        }
+        .arc-reactor.state-listening {
+            --reactor-color: #00ff66;
+            --reactor-glow: rgba(0, 255, 102, 0.7);
+        }
+        .arc-reactor.state-thinking {
+            --reactor-color: #ffcc00;
+            --reactor-glow: rgba(255, 204, 0, 0.7);
+        }
+        .arc-reactor.state-speaking {
+            --reactor-color: #0088ff;
+            --reactor-glow: rgba(0, 136, 255, 0.8);
+        }
+        .arc-reactor.state-alarm {
+            --reactor-color: #ff003c;
+            --reactor-glow: rgba(255, 0, 60, 0.9);
+        }
+        .arc-reactor.state-party {
+            animation: rotateOuter 4s linear infinite, partyPulse 0.8s infinite alternate;
+        }
+
+        @keyframes partyPulse {
+            0% { transform: scale(0.95); filter: hue-rotate(0deg); }
+            100% { transform: scale(1.1); filter: hue-rotate(360deg); }
+        }
+
+        @keyframes rotateOuter { 100% { transform: rotate(360deg); } }
+        @keyframes rotateInner { 100% { transform: rotate(-360deg); } }
+        @keyframes pulseCore {
+            0% { transform: scale(0.85); opacity: 0.7; }
+            100% { transform: scale(1.1); opacity: 1; }
+        }
+
+        .quick-btn {
+            background: rgba(0, 243, 255, 0.08);
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 6px;
+            font-size: 0.72rem;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.25s ease;
+            text-align: center;
+        }
+
+        .quick-btn:hover {
+            background: var(--primary-color);
+            color: #000;
+            box-shadow: 0 0 12px var(--primary-color);
+            transform: translateY(-1px);
+        }
+
+        .notes-container {
+            max-height: 125px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 3px;
+            padding-right: 4px;
+        }
+
+        .notes-container::-webkit-scrollbar { width: 4px; }
+        .notes-container::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 2px;
+        }
+
+        .note-card {
+            background: rgba(0, 243, 255, 0.05);
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            padding: 6px 8px;
+            font-size: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 6px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+        .note-text { color: #fff; word-break: break-word; }
+        .note-date { font-size: 0.65rem; color: #ffcc00; margin-top: 2px; }
+
+        .delete-btn {
+            background: transparent;
+            border: none;
+            color: var(--accent-red);
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .delete-btn:hover { color: #fff; }
+
+        .terminal-box {
+            height: 110px;
+            background: var(--panel-bg);
+            border: 1px solid var(--primary-color);
+            border-radius: 8px;
+            padding: 10px 12px;
+            overflow-y: auto;
+            box-shadow: 0 0 15px var(--primary-glow);
+            font-size: 0.85rem;
+            backdrop-filter: blur(8px);
+        }
+
+        .terminal-box::-webkit-scrollbar { width: 4px; }
+        .terminal-box::-webkit-scrollbar-thumb { background: var(--primary-color); }
+
+        .log-entry { margin-bottom: 5px; line-height: 1.35; font-size: 0.82rem; }
+        .log-user { color: #ffcc00; }
+        .log-jarvis { color: var(--primary-color); font-weight: bold; }
+        .log-system { color: #ff003c; font-weight: bold; }
+
+        footer {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            background: rgba(0, 0, 0, 0.75);
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 10px 14px;
+            border-radius: 6px;
+            outline: none;
+            font-size: 0.9rem;
+            box-shadow: inset 0 0 10px rgba(0, 243, 255, 0.1);
+            user-select: text;
+        }
+
+        input[type="text"]:focus { box-shadow: 0 0 10px var(--primary-color); }
+
+        button.action-btn {
+            background: var(--primary-color);
+            color: #000;
+            border: none;
+            padding: 10px 18px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.3s;
+            font-size: 0.85rem;
+        }
+
+        button.action-btn:hover {
+            box-shadow: 0 0 15px var(--primary-color);
+            transform: scale(1.02);
+        }
+
+        #reboot-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #000;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #ff003c;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .reboot-progress {
+            width: 320px; height: 10px; border: 1px solid #ff003c;
+            margin-top: 20px; position: relative; border-radius: 5px; overflow: hidden;
+            box-shadow: 0 0 15px rgba(255, 0, 60, 0.5);
+        }
+
+        .reboot-fill { width: 0%; height: 100%; background: #ff003c; transition: width 0.1s linear; }
+
+        @media (max-width: 768px) {
+            .hud-grid { grid-template-columns: 1fr; overflow-y: auto; }
+            .hud-panel { display: none; }
+            .hud-panel.center-hud { display: flex; }
+        }
+    </style>
+</head>
+<body onclick="unlockAudio()">
+
+    <div id="reboot-overlay">
+        <h1 style="font-size: 2rem; margin-bottom: 10px; text-shadow: 0 0 10px #ff003c;">💥 CRITICAL SYSTEM OVERLOAD</h1>
+        <p style="font-size: 1rem; color: #fff;">ÇEKİRDEK İMHA EDİLDİ. ACİL REBOOT PROTOKOLÜ BAŞLATILIYOR...</p>
+        <div class="reboot-progress"><div class="reboot-fill" id="reboot-bar"></div></div>
+    </div>
+
+    <header>
+        <div class="sys-title">J.A.R.V.I.S. // MARK X</div>
+        <div class="sys-stats">
+            <div>KULLANICI: <span style="color: #ffcc00;">BAY LEWZON</span></div>
+            <div>DURUM: <span id="sys-status" style="color: #00ff66;">ONLINE</span></div>
+            <div>SAAT: <span id="clock">00:00:00</span></div>
+        </div>
+    </header>
+
+    <div class="hud-grid" id="hudGrid">
+
+        <!-- SOL PANEL -->
+        <div class="hud-panel">
+            <div class="panel-header"><span>Sistem Telemetrisi</span><span>[SYS]</span></div>
+
+            <div class="telemetry-item">
+                <div class="telemetry-label"><span>ÇEKİRDEK GÜCÜ</span><span id="val-power">--%</span></div>
+                <div class="bar-bg"><div class="bar-fill" id="bar-power" style="width: 0%;"></div></div>
+            </div>
+
+            <div class="telemetry-item">
+                <div class="telemetry-label"><span>İŞLEMCİ YÜKÜ</span><span id="val-cpu">22%</span></div>
+                <div class="bar-bg"><div class="bar-fill" id="bar-cpu" style="width: 22%;"></div></div>
+            </div>
+
+            <div class="telemetry-item">
+                <div class="telemetry-label"><span>ÇEKİRDEK SICAKLIĞI</span><span id="val-temp">40°C</span></div>
+                <div class="bar-bg"><div class="bar-fill" id="bar-temp" style="width: 40%;"></div></div>
+            </div>
+
+            <div class="panel-header" style="margin-top: 10px;"><span>İklim & Hava Durumu</span><span>[ENV]</span></div>
+            <div class="telemetry-item">
+                <div class="telemetry-label"><span>DURUM</span><span id="val-weather-desc" style="color:#ffcc00;">Yükleniyor...</span></div>
+                <div class="telemetry-label"><span>DIŞ SICAKLIK</span><span id="val-temp-ext">--°C</span></div>
+                <div class="telemetry-label"><span>RÜZGAR HIZI</span><span id="val-wind">-- km/h</span></div>
+            </div>
+
+            <div class="panel-header" style="margin-top: 10px;"><span>Ses & Zeka</span><span>[VOX]</span></div>
+            <div class="telemetry-item">
+                <div class="telemetry-label"><span>SES</span><span id="val-voice-engine" style="color:#ffcc00;">--</span></div>
+                <div class="telemetry-label"><span>ZEKA</span><span id="val-ai-engine" style="color:#ffcc00;">--</span></div>
+            </div>
+
+            <div style="font-size: 0.7rem; margin-top: auto; opacity: 0.7; border-top: 1px dashed var(--primary-color); padding-top: 5px;">
+                STARK PROTOCOL v10.4<br>
+                BAY LEWZON EXCLUSIVE OS
+            </div>
+        </div>
+
+        <!-- ORTA PANEL -->
+        <div class="hud-panel center-hud">
+            <div class="reactor-wrapper">
+                <canvas id="visualizer-canvas" width="280" height="280"></canvas>
+                <div class="arc-reactor state-idle" id="arc-reactor" onclick="toggleListening()">
+                    <div class="arc-inner-ring"></div>
+                    <div class="arc-core"></div>
+                </div>
+            </div>
+            <p style="margin-top: 15px; letter-spacing: 2px; font-size: 0.8rem; font-weight: bold;" id="mic-status">REAKTÖRE TIKLAYIP KONUŞUN</p>
+        </div>
+
+        <!-- SAĞ PANEL -->
+        <div class="hud-panel">
+            <div class="panel-header"><span>Sistem Hafızası / Notlar</span><span>[MEM]</span></div>
+
+            <div class="notes-container" id="notes-list"></div>
+
+            <div class="panel-header" style="margin-top: 5px;"><span>Hızlı Protokoller</span><span>[CMD]</span></div>
+            <button class="quick-btn" onclick="processCommand('Hava durumu report')">🌤️ HAVA DURUMU REPORT</button>
+            <button class="quick-btn" onclick="processCommand('Parti modu')">🪩 PARTİ MODU (RGB)</button>
+            <button class="quick-btn" onclick="processCommand('Matrix modu')">📟 MATRIX MODU</button>
+            <button class="quick-btn" onclick="processCommand('Gizlilik modu')">🟢 GİZLİLİK MODU</button>
+            <button class="quick-btn" onclick="processCommand('Kırmızı alarm')">🔴 KIRMIZI ALARM</button>
+            <button class="quick-btn" onclick="processCommand('Espri yap')">🎭 ESPRİ YAP</button>
+            <button class="quick-btn" onclick="processCommand('Normal mod')">🔄 SİSTEMİ SIFIRLA</button>
+            <button class="quick-btn" style="border-color: var(--accent-red); color: var(--accent-red);" onclick="processCommand('Kendi kendini imha')">💥 İMHA PROTOKOLÜ</button>
+        </div>
+
+    </div>
+
+    <div class="terminal-box" id="terminal">
+        <div class="log-entry log-jarvis">[JARVIS]: Sistem çevrimiçi Bay Lewzon. Emrinizdeyim.</div>
+    </div>
+
+    <footer>
+        <input type="text" id="user-input" placeholder="Komut verin veya JARVIS ile sohbet edin..." onkeydown="if(event.key==='Enter') sendTextCommand()">
+        <button class="action-btn" onclick="sendTextCommand()">GÖNDER</button>
+        <button class="action-btn" onclick="toggleListening()" id="mic-btn">DİNLE</button>
+        <button class="action-btn" onclick="toggleAmbientSound()" id="ambient-btn" style="background: #113344; color: #00f3ff; border: 1px solid #00f3ff;">ORTAM SESİ</button>
+    </footer>
+
+    <script>
+        // ============================================================
+        // AYARLAR  <<< BURAYA KENDİ BİLGİLERİNİ YAZ >>>
+        // ============================================================
+
+        // ElevenLabs (isteğe bağlı, güzel ses için). Boş bırakırsan tarayıcı sesi kullanılır.
+        const ELEVEN_API_KEY = "BURAYA_API_KEY";
+        const ELEVEN_VOICE_ID = "BURAYA_VOICE_ID";
+        const ELEVEN_MODEL_ID = "eleven_multilingual_v2";
+        // Bu uzunluktan uzun cümleler ücretsiz tarayıcı sesiyle okunur (krediyi korur)
+        const ELEVEN_MAX_CHARS = 120;
+
+        // Google Gemini (ücretsiz, serbest sohbet için). aistudio.google.com'dan key al.
+        const AI_API_KEY = "AQ.Ab8RN6IGsUOVGC299hGkQ-XtUAMSIx2Q3OAbGu0wSzHG2Q8CkQ";
+        // Bu model 404 verirse "gemini-3.1-flash-lite" veya "gemini-flash-latest" dene
+        const AI_MODEL = "gemini-3.5-flash-lite";
+
+        // ============================================================
+
+        const elevenEnabled = !!ELEVEN_API_KEY && !ELEVEN_API_KEY.startsWith("BURAYA")
+                           && !!ELEVEN_VOICE_ID && !ELEVEN_VOICE_ID.startsWith("BURAYA");
+        const aiEnabled = !!AI_API_KEY && !AI_API_KEY.startsWith("BURAYA");
+
+        let isElevenSpeaking = false;
+        let isSpeakingFlag = false;   // konuşma boyunca true: mikrofonun yeniden açılmasını engeller
+        let currentAudio = null;
+        let speakToken = 0;      // eski isteklerin yeni konuşmayı bozmasını önler
+        let browserToken = 0;    // tarayıcı sesi için aynı koruma
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        async function unlockAudio() {
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
+        }
+
+        let currentSystemMode = 'idle';
+
+        // 1. CANLI SES VISUALIZER
+        // Not: Mikrofon akışı bilerek bağlanmıyor. Android'de açık mikrofon hoparlör sesini
+        // kısabiliyor. Çubuklar konuşma/dinleme sırasında simüle edilir.
+        let analyserNode = null;
+        let visualizerCanvas, visualizerCtx;
+        let dataArray, bufferLength;
+
+        function initVisualizer() {
+            visualizerCanvas = document.getElementById('visualizer-canvas');
+            if (!visualizerCanvas) return;
+            visualizerCtx = visualizerCanvas.getContext('2d');
+
+            if (!analyserNode && audioCtx) {
+                analyserNode = audioCtx.createAnalyser();
+                analyserNode.fftSize = 64;
+                bufferLength = analyserNode.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+            }
+
+            drawVisualizer();
+        }
+
+        function drawVisualizer() {
+            requestAnimationFrame(drawVisualizer);
+            if (!visualizerCtx) return;
+
+            if (analyserNode) {
+                analyserNode.getByteFrequencyData(dataArray);
+            }
+
+            visualizerCtx.clearRect(0, 0, visualizerCanvas.width, visualizerCanvas.height);
+
+            const centerX = visualizerCanvas.width / 2;
+            const centerY = visualizerCanvas.height / 2;
+            const radius = 108;
+            const bars = bufferLength || 32;
+
+            const computedStyle = getComputedStyle(document.body);
+            const primaryColor = computedStyle.getPropertyValue('--primary-color').trim() || '#00f3ff';
+
+            visualizerCtx.lineWidth = 2.5;
+            visualizerCtx.strokeStyle = primaryColor;
+            visualizerCtx.shadowBlur = 12;
+            visualizerCtx.shadowColor = primaryColor;
+
+            for (let i = 0; i < bars; i++) {
+                let value = dataArray ? dataArray[i] : 0;
+
+                if (isListening || isSpeakingFlag || window.speechSynthesis.speaking || isElevenSpeaking || isAmbientOn) {
+                    if (value === 0) value = Math.floor(Math.random() * 120) + 40;
+                }
+
+                const barHeight = (value / 255) * 32;
+                const angle = (i * 2 * Math.PI) / bars;
+
+                const x1 = centerX + Math.cos(angle) * radius;
+                const y1 = centerY + Math.sin(angle) * radius;
+                const x2 = centerX + Math.cos(angle) * (radius + barHeight);
+                const y2 = centerY + Math.sin(angle) * (radius + barHeight);
+
+                visualizerCtx.beginPath();
+                visualizerCtx.moveTo(x1, y1);
+                visualizerCtx.lineTo(x2, y2);
+                visualizerCtx.stroke();
+            }
+        }
+
+        // 2. CANLI HAVA DURUMU (OPEN-METEO)
+        let currentWeatherInfo = { temp: '--', wind: '--', desc: 'Bilinmiyor' };
+
+        function weatherCodeToText(code) {
+            if (code === 0) return 'Açık & Güneşli';
+            if ([1, 2, 3].includes(code)) return 'Parçalı Bulutlu';
+            if ([45, 48].includes(code)) return 'Sisli';
+            if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) return 'Yağmurlu';
+            if ([71, 73, 75, 77, 85, 86].includes(code)) return 'Kar Yağışlı';
+            if ([95, 96, 99].includes(code)) return 'Fırtınalı';
+            return 'Açık';
+        }
+
+        function fetchWeather() {
+            const defaultLat = 37.066;
+            const defaultLon = 37.383;
+
+            function getWeather(lat, lon) {
+                fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.current_weather) {
+                            const cw = data.current_weather;
+                            currentWeatherInfo.temp = Math.round(cw.temperature);
+                            currentWeatherInfo.wind = Math.round(cw.windspeed);
+                            currentWeatherInfo.desc = weatherCodeToText(cw.weathercode);
+
+                            document.getElementById('val-weather-desc').innerText = currentWeatherInfo.desc;
+                            document.getElementById('val-temp-ext').innerText = currentWeatherInfo.temp + "°C";
+                            document.getElementById('val-wind').innerText = currentWeatherInfo.wind + " km/h";
+                            addLog('SİSTEM', `İklim verisi güncellendi: ${currentWeatherInfo.desc}, ${currentWeatherInfo.temp}°C`);
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Hava durumu verisi alınamadı:", err);
+                        document.getElementById('val-weather-desc').innerText = "Bağlantı Hatası";
+                    });
+            }
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => getWeather(pos.coords.latitude, pos.coords.longitude),
+                    err => getWeather(defaultLat, defaultLon),
+                    { timeout: 5000 }
+                );
+            } else {
+                getWeather(defaultLat, defaultLon);
+            }
+        }
+
+        // BATARYA & AĞ TAKİBİ
+        let currentBatteryLevel = 100;
+        let isBatteryCharging = false;
+
+        function initBattery() {
+            if ('getBattery' in navigator) {
+                navigator.getBattery().then(battery => {
+                    function updateBatteryInfo() {
+                        currentBatteryLevel = Math.round(battery.level * 100);
+                        isBatteryCharging = battery.charging;
+
+                        const powerVal = document.getElementById('val-power');
+                        const powerBar = document.getElementById('bar-power');
+
+                        if (powerVal && powerBar) {
+                            powerVal.innerText = currentBatteryLevel + "%" + (isBatteryCharging ? " (ŞARJ)" : "");
+                            powerBar.style.width = currentBatteryLevel + "%";
+
+                            if (currentBatteryLevel <= 15 && !isBatteryCharging) {
+                                powerBar.style.background = "#ff003c";
+                            } else {
+                                powerBar.style.background = "var(--primary-color)";
+                            }
+                        }
+                    }
+
+                    updateBatteryInfo();
+                    battery.addEventListener('levelchange', updateBatteryInfo);
+                    battery.addEventListener('chargingchange', () => {
+                        updateBatteryInfo();
+                        if (battery.charging) {
+                            addLog('SİSTEM', 'Şarj kaynağı bağlandı. Çekirdek güç topluyor.');
+                            speak('Şarj kaynağı bağlandı Bay Lewzon.');
+                        } else {
+                            addLog('SİSTEM', 'Şarj kaynağı ayrıldı. Güç pil modunda.');
+                        }
+                    });
+                });
+            } else {
+                addLog('SİSTEM', 'Cihaz Batarya API desteklemiyor.');
+                document.getElementById('val-power').innerText = "98%";
+                document.getElementById('bar-power').style.width = "98%";
+            }
+        }
+
+        function initNetworkMonitoring() {
+            function updateOnlineStatus() {
+                const statusElem = document.getElementById('sys-status');
+                if (navigator.onLine) {
+                    if (statusElem && currentSystemMode === 'idle') {
+                        statusElem.innerText = "ONLINE";
+                        statusElem.style.color = "#00ff66";
+                    }
+                } else {
+                    if (statusElem) {
+                        statusElem.innerText = "OFFLINE";
+                        statusElem.style.color = "#ff003c";
+                    }
+                }
+            }
+
+            window.addEventListener('online', () => {
+                updateOnlineStatus();
+                addLog('SİSTEM', 'Şebeke bağlantısı yeniden sağlandı.');
+                speak('Şebeke bağlantısı tekrar sağlandı Bay Lewzon.');
+            });
+
+            window.addEventListener('offline', () => {
+                updateOnlineStatus();
+                addLog('SİSTEM', 'UYARI: Şebeke bağlantısı koptu!');
+                playBeep(400, 'sawtooth', 0.3);
+                speak('Uyarı: Şebeke bağlantısı kesildi Bay Lewzon.');
+            });
+
+            updateOnlineStatus();
+        }
+
+        // HAFIZA / LOCALSTORAGE NOT SİSTEMİ
+        function getStoredNotes() {
+            try {
+                return JSON.parse(localStorage.getItem('jarvis_memory_notes')) || [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function saveNoteToMemory(text) {
+            const notes = getStoredNotes();
+            const newNote = {
+                id: Date.now(),
+                text: text,
+                date: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+            };
+            notes.unshift(newNote);
+            localStorage.setItem('jarvis_memory_notes', JSON.stringify(notes));
+            renderNotesUI();
+        }
+
+        function deleteNoteFromMemory(id) {
+            let notes = getStoredNotes();
+            notes = notes.filter(n => n.id !== id);
+            localStorage.setItem('jarvis_memory_notes', JSON.stringify(notes));
+            renderNotesUI();
+            addLog('SİSTEM', 'Not hafızadan silindi.');
+        }
+
+        function clearAllMemoryNotes() {
+            localStorage.removeItem('jarvis_memory_notes');
+            renderNotesUI();
+        }
+
+        function renderNotesUI() {
+            const container = document.getElementById('notes-list');
+            const notes = getStoredNotes();
+            container.innerHTML = '';
+
+            if (notes.length === 0) {
+                container.innerHTML = '<div style="font-size:0.7rem; color:#888; text-align:center; margin-top:5px;">Hafıza boş.</div>';
+                return;
+            }
+
+            notes.forEach(note => {
+                const card = document.createElement('div');
+                card.className = 'note-card';
+                card.innerHTML = `
+                    <div>
+                        <div class="note-text">${escapeHtml(note.text)}</div>
+                        <div class="note-date">${note.date}</div>
+                    </div>
+                    <button class="delete-btn" onclick="deleteNoteFromMemory(${note.id})" title="Sil">✕</button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/[&<>"']/g, match => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[match]));
+        }
+
+        // SES EFEKTLERİ
+        function playBeep(freq = 800, type = 'sine', duration = 0.1) {
+            try {
+                unlockAudio();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e) {}
+        }
+
+        function playExplosionSound() {
+            try {
+                unlockAudio();
+                const bufferSize = audioCtx.sampleRate * 2;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(800, audioCtx.currentTime);
+                filter.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 1.8);
+
+                const gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(0.6, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.8);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+                noise.start();
+            } catch(e) {}
+        }
+
+        function setReactorState(state) {
+            const reactor = document.getElementById('arc-reactor');
+            reactor.className = `arc-reactor state-${state}`;
+            const micStatus = document.getElementById('mic-status');
+
+            if (state === 'listening') {
+                micStatus.innerText = "🟢 SİZİ DİNLİYORUM (BAY LEWZON)...";
+                micStatus.style.color = "#00ff66";
+            } else if (state === 'thinking') {
+                micStatus.innerText = "🟡 DÜŞÜNÜYOR / İŞLENİYOR...";
+                micStatus.style.color = "#ffcc00";
+            } else if (state === 'speaking') {
+                micStatus.innerText = "🔵 KONUŞUYOR (JARVIS)...";
+                micStatus.style.color = "#0088ff";
+            } else if (state === 'alarm') {
+                micStatus.innerText = "🔴 ALARM / KENDİ KENDİNİ İMHA";
+                micStatus.style.color = "#ff003c";
+            } else if (state === 'party') {
+                micStatus.innerText = "🪩 PARTİ MODU AKTİF (RGB)";
+                micStatus.style.color = "#ff00ff";
+            } else if (state === 'stealth') {
+                micStatus.innerText = "🟢 GİZLİLİK MODU AKTİF";
+                micStatus.style.color = "#00ff66";
+            } else {
+                micStatus.innerText = "🩵 REAKTÖRE TIKLAYIP KONUŞUN";
+                micStatus.style.color = "var(--primary-color)";
+            }
+        }
+
+        let ambientOsc1 = null, ambientOsc2 = null, ambientGain = null;
+        let isAmbientOn = false;
+
+        async function toggleAmbientSound() {
+            await unlockAudio();
+            const btn = document.getElementById('ambient-btn');
+
+            if (!isAmbientOn) {
+                try {
+                    ambientOsc1 = audioCtx.createOscillator();
+                    ambientOsc2 = audioCtx.createOscillator();
+                    ambientGain = audioCtx.createGain();
+
+                    ambientOsc1.type = 'sawtooth';
+                    ambientOsc1.frequency.setValueAtTime(65, audioCtx.currentTime);
+
+                    ambientOsc2.type = 'triangle';
+                    ambientOsc2.frequency.setValueAtTime(130, audioCtx.currentTime);
+
+                    const filter = audioCtx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(280, audioCtx.currentTime);
+
+                    ambientGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+                    ambientGain.gain.exponentialRampToValueAtTime(0.15, audioCtx.currentTime + 0.5);
+
+                    ambientOsc1.connect(filter);
+                    ambientOsc2.connect(filter);
+                    filter.connect(ambientGain);
+                    if (analyserNode) ambientGain.connect(analyserNode);
+                    ambientGain.connect(audioCtx.destination);
+
+                    ambientOsc1.start();
+                    ambientOsc2.start();
+                    isAmbientOn = true;
+                    btn.style.background = "var(--primary-color)";
+                    btn.style.color = "#000";
+                    addLog('JARVIS', 'Reaktör ortam sesi başlatıldı Bay Lewzon.');
+                } catch(e) {
+                    addLog('SİSTEM', 'Ortam sesi başlatılamadı.');
+                }
+            } else {
+                if (ambientGain) {
+                    ambientGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+                    setTimeout(() => {
+                        if (ambientOsc1) { try{ ambientOsc1.stop(); ambientOsc1.disconnect(); }catch(e){} ambientOsc1 = null; }
+                        if (ambientOsc2) { try{ ambientOsc2.stop(); ambientOsc2.disconnect(); }catch(e){} ambientOsc2 = null; }
+                        isAmbientOn = false;
+                    }, 300);
+                } else {
+                    isAmbientOn = false;
+                }
+                btn.style.background = "#113344";
+                btn.style.color = "var(--primary-color)";
+                addLog('JARVIS', 'Ortam sesi kapatıldı.');
+            }
+        }
+
+        // Telemetri Simülasyonu
+        setInterval(() => {
+            const cpu = Math.floor(Math.random() * 20) + 15;
+            const temp = Math.floor(Math.random() * 4) + 39;
+            document.getElementById('val-cpu').innerText = cpu + "%";
+            document.getElementById('bar-cpu').style.width = cpu + "%";
+            document.getElementById('val-temp').innerText = temp + "°C";
+            document.getElementById('bar-temp').style.width = temp + "%";
+        }, 3000);
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString('tr-TR');
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        function addLog(sender, text) {
+            const terminal = document.getElementById('terminal');
+            const entry = document.createElement('div');
+            let cls = 'log-jarvis';
+            if (sender === 'KULLANICI') cls = 'log-user';
+            if (sender === 'SİSTEM') cls = 'log-system';
+            entry.className = `log-entry ${cls}`;
+            entry.innerText = `[${sender}]: ${text}`;
+            terminal.appendChild(entry);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function setVoiceEngineLabel(text, color) {
+            const el = document.getElementById('val-voice-engine');
+            if (el) { el.innerText = text; el.style.color = color; }
+        }
+
+        function setAiEngineLabel(text, color) {
+            const el = document.getElementById('val-ai-engine');
+            if (el) { el.innerText = text; el.style.color = color; }
+        }
+
+        // ============================================================
+        // SES SENTEZİ: ELEVENLABS (kısa cümleler) + TARAYICI SESİ (uzun / yedek)
+        // ============================================================
+        let activeUtterances = [];
+
+        function browserSpeak(text, done) {
+            if (!('speechSynthesis' in window)) { done(); return; }
+            const myBrowserToken = ++browserToken;
+            window.speechSynthesis.cancel();
+
+            const voices = window.speechSynthesis.getVoices();
+            const trVoice = voices.find(v => v.lang.toLowerCase().startsWith('tr'));
+
+            // Uzun cevabı cümlelere böl, konuşma motoru tıkanmasın
+            const parts = (text.match(/[^.!?]+[.!?]*/g) || [text])
+                .map(p => p.trim()).filter(Boolean);
+            if (!parts.length) { done(); return; }
+
+            activeUtterances = parts.map(p => {
+                const u = new SpeechSynthesisUtterance(p);
+                u.lang = 'tr-TR';
+                u.rate = 0.95;
+                u.pitch = 0.6;
+                if (trVoice) u.voice = trVoice;
+                return u;
+            });
+
+            const last = activeUtterances[activeUtterances.length - 1];
+            last.onend = done;
+            last.onerror = (e) => {
+                if (e && e.error && e.error !== 'canceled' && e.error !== 'interrupted') {
+                    addLog('SİSTEM', 'Ses hatası: ' + e.error);
+                }
+                done();
+            };
+
+            // cancel() sonrası kısa bekleme, yoksa Chrome sessiz kalabiliyor
+            setTimeout(() => {
+                if (myBrowserToken !== browserToken) return;
+                activeUtterances.forEach(u => window.speechSynthesis.speak(u));
+            }, 150);
+        }
+
+        function stopAllSpeech() {
+            if (currentAudio) {
+                try { currentAudio.onended = null; currentAudio.onerror = null; currentAudio.pause(); } catch(e) {}
+                currentAudio = null;
+            }
+            browserToken++;
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            isElevenSpeaking = false;
+        }
+
+        function speak(text, callback) {
+            const wasListening = isListening;
+            if (recognition && isListening) {
+                try { recognition.stop(); } catch(e){}
+            }
+
+            stopAllSpeech();
+            isSpeakingFlag = true;   // konuşma başladı: onend mikrofonu yeniden açmasın
+            const myToken = ++speakToken;
+            setReactorState('speaking');
+
+            let finished = false;
+            const resetState = function() {
+                if (finished || myToken !== speakToken) return;
+                finished = true;
+                isElevenSpeaking = false;
+                isSpeakingFlag = false;   // konuşma bitti
+                if (callback) callback();
+                if (wasListening && isListening) {
+                    setReactorState('listening');
+                    setTimeout(() => { try { recognition.start(); } catch(e){} }, 200);
+                } else {
+                    setReactorState(currentSystemMode);
+                }
+            };
+
+            // ElevenLabs kapalıysa ya da cümle uzunsa ücretsiz tarayıcı sesi
+            if (!elevenEnabled || text.length > ELEVEN_MAX_CHARS) {
+                if (elevenEnabled) setVoiceEngineLabel("TARAYICI (UZUN METİN)", "#ffcc00");
+                browserSpeak(text, resetState);
+                return;
+            }
+
+            isElevenSpeaking = true;
+            fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVEN_VOICE_ID}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "audio/mpeg",
+                    "xi-api-key": ELEVEN_API_KEY.trim()
+                },
+                body: JSON.stringify({
+                    text: text,
+                    model_id: ELEVEN_MODEL_ID,
+                    voice_settings: { stability: 0.5, similarity_boost: 0.75 }
+                })
+            })
+            .then(async res => {
+                if (!res.ok) {
+                    let detail = "";
+                    try {
+                        const j = await res.json();
+                        detail = (j.detail && (j.detail.status || j.detail.message)) || JSON.stringify(j);
+                    } catch(e) {}
+                    throw new Error("HTTP " + res.status + (detail ? " - " + detail : ""));
+                }
+                return res.blob();
+            })
+            .then(blob => {
+                if (myToken !== speakToken) return; // arada yeni konuşma başladı
+                const url = URL.createObjectURL(blob);
+                currentAudio = new Audio(url);
+                currentAudio.onended = () => { URL.revokeObjectURL(url); resetState(); };
+                currentAudio.onerror = () => { URL.revokeObjectURL(url); resetState(); };
+                setVoiceEngineLabel("ELEVENLABS", "#00ff66");
+                // Mikrofonun tamamen kapanması için kısa bekleme
+                setTimeout(() => {
+                    if (myToken !== speakToken || !currentAudio) return;
+                    currentAudio.play().catch(err => {
+                        addLog('SİSTEM', 'Ses çalınamadı: ' + err.name);
+                        resetState();
+                    });
+                }, 400);
+            })
+            .catch(err => {
+                console.error("ElevenLabs hatası:", err);
+                if (myToken !== speakToken) return;
+                isElevenSpeaking = false;
+                setVoiceEngineLabel("TARAYICI (YEDEK)", "#ff003c");
+                addLog('SİSTEM', 'ElevenLabs hatası: ' + err.message + ' — tarayıcı sesine geçildi.');
+                browserSpeak(text, resetState);
+            });
+        }
+
+        // ============================================================
+        // SERBEST SOHBET: GOOGLE GEMINI
+        // ============================================================
+        let chatHistory = [];
+
+        const JARVIS_PERSONA = `Sen J.A.R.V.I.S.'sin, Tony Stark'ın yapay zeka asistanı. Kullanıcın Bay Lewzon. Türkçe konuş. Tonun sakin, zeki, kibar ve hafif alaycı bir İngiliz uşak gibi olsun. Cevapların sesli okunacak: en fazla 2-3 kısa cümle yaz, madde işareti, emoji veya markdown kullanma. Ona "Bay Lewzon" veya "Efendi" diye hitap et.`;
+
+        async function askJarvis(userText) {
+            setReactorState('thinking');
+            chatHistory.push({ role: "user", parts: [{ text: userText }] });
+            chatHistory = chatHistory.slice(-10);
+
+            let persona = JARVIS_PERSONA;
+            if (currentWeatherInfo.temp !== '--') {
+                persona += ` Güncel hava durumu: ${currentWeatherInfo.desc}, ${currentWeatherInfo.temp} derece, rüzgar ${currentWeatherInfo.wind} km/s.`;
+            }
+
+            try {
+                const res = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/${AI_MODEL}:generateContent`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "x-goog-api-key": AI_API_KEY.trim()
+                        },
+                        body: JSON.stringify({
+                            system_instruction: { parts: [{ text: persona }] },
+                            contents: chatHistory,
+                            generationConfig: { maxOutputTokens: 300 }
+                        })
+                    }
+                );
+                if (!res.ok) {
+                    let detail = "";
+                    try {
+                        const j = await res.json();
+                        detail = (j.error && j.error.message) || "";
+                    } catch(e) {}
+                    throw new Error("HTTP " + res.status + (detail ? " - " + detail.slice(0, 120) : ""));
+                }
+                const data = await res.json();
+                const reply = ((data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [])
+                    .map(p => p.text || "").join("").trim();
+                if (!reply) throw new Error("Boş cevap");
+
+                chatHistory.push({ role: "model", parts: [{ text: reply }] });
+                setAiEngineLabel("GEMINI", "#00ff66");
+                addLog('JARVIS', reply);
+                speak(reply);
+            } catch (err) {
+                chatHistory.pop();
+                setAiEngineLabel("HATA", "#ff003c");
+                addLog('SİSTEM', 'Yapay zeka hatası: ' + err.message);
+                setReactorState(currentSystemMode);
+                speak("Bağlantıda bir sorun var Bay Lewzon.");
+            }
+        }
+
+        function getTitle() {
+            return Math.random() > 0.5 ? "Bay Lewzon" : "Efendi";
+        }
+
+        const jokes = [
+            "Neden yazılımcılar gözlük takar? Çünkü C Sharp göremiyorlar!",
+            "Bir yazılımcı sahilde ne yapar? Veri tabanında serinler!",
+            "İki bilgisayar karşılaşmış, biri diğerine 'Benim de hafızam çok dolu' demiş!",
+            "Kodum çalışıyor ama neden çalıştığını ben de bilmiyorum efendim!"
+        ];
+
+        // 3. KOMUT İŞLEYİCİSİ
+        function processCommand(command) {
+            playBeep(1000, 'sine', 0.08);
+            const cmd = command.toLowerCase().trim();
+            addLog('KULLANICI', command);
+
+            // Uzun ve serbest cümleler Gemini'ye gider, bilinen komutlar yerelde çalışır
+            const localPrefix = /^(hesapla|not et|not al|kaydet|şunu kaydet|youtube|google|wikipedia|vikipedi|haritada|notları|notlarımı|hafızayı|ortam sesi)/;
+            if (aiEnabled && cmd.split(/\s+/).length > 3 && !localPrefix.test(cmd)) {
+                askJarvis(command);
+                return;
+            }
+
+            let response = "";
+            const title = getTitle();
+
+            // HESAPLAMA SORGULARI
+            if (cmd.startsWith("hesapla") || cmd.includes("kaç eder") || cmd.includes("artı") || cmd.includes("çarpı")) {
+                try {
+                    let mathExpr = cmd.replace("hesapla", "")
+                                     .replace("kaç eder", "")
+                                     .replace(/artı/g, "+")
+                                     .replace(/eksi/g, "-")
+                                     .replace(/çarpı/g, "*")
+                                     .replace(/bölü/g, "/")
+                                     .trim();
+                    // Güvenlik: yalnızca sayı ve temel operatörlere izin ver
+                    if (/^[0-9+\-*/().,\s]+$/.test(mathExpr)) {
+                        let res = Function('"use strict"; return (' + mathExpr.replace(/,/g, '.') + ')')();
+                        if (!isNaN(res) && isFinite(res)) {
+                            response = `İşlemin sonucu ${res} ${title}.`;
+                        }
+                    }
+                } catch(e) {}
+            }
+
+            if (!response) {
+                if (cmd.includes("hava") || cmd.includes("sıcaklık") || cmd.includes("iklim") || cmd.includes("derece")) {
+                    if (currentWeatherInfo.temp !== '--') {
+                        response = `Bay Lewzon, konumunuzda hava ${currentWeatherInfo.desc}, sıcaklık ${currentWeatherInfo.temp} derece, rüzgar hızı ise saatte ${currentWeatherInfo.wind} kilometre.`;
+                    } else {
+                        response = `Bay Lewzon, hava durumu verileri henüz çekilemedi. Lütfen bağlantınızı kontrol edin.`;
+                    }
+                }
+                else if (cmd.includes("youtube") || cmd.includes("youtube'da")) {
+                    let query = cmd.replace(/.*youtube('da|da)?\s*/i, '').replace(/\s*(ara|aç).*/i, '').trim();
+                    if (query && query !== "youtube") {
+                        window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`, '_blank');
+                        response = `Bay Lewzon, YouTube üzerinde "${query}" için arama sonuçlarını açıyorum.`;
+                    } else {
+                        window.open('https://www.youtube.com', '_blank');
+                        response = `Bay Lewzon, YouTube açılıyor.`;
+                    }
+                }
+                else if (cmd.includes("google") || cmd.includes("internette ara") || cmd.endsWith("ara")) {
+                    let query = cmd.replace(/.*google('da|da)?\s*/i, '').replace(/.*internette ara\s*/i, '').replace(/\s*ara$/, '').trim();
+                    if (query && query !== "google") {
+                        window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+                        response = `Bay Lewzon, Google üzerinde "${query}" aramasını başlatıyorum.`;
+                    } else {
+                        window.open('https://www.google.com', '_blank');
+                        response = `Bay Lewzon, Google arama motoru açılıyor.`;
+                    }
+                }
+                else if (cmd.includes("wikipedia") || cmd.includes("vikipedi")) {
+                    let query = cmd.replace(/.*wikipedia('da)?\s*/i, '').replace(/.*vikipedi('de)?\s*/i, '').replace(/\s*ara.*/i, '').trim();
+                    if (query) {
+                        window.open(`https://tr.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(query)}`, '_blank');
+                        response = `Bay Lewzon, Vikipedi üzerinde "${query}" bilgisi sorgulanıyor.`;
+                    } else {
+                        window.open('https://tr.wikipedia.org', '_blank');
+                        response = `Bay Lewzon, Vikipedi ana sayfası açılıyor.`;
+                    }
+                }
+                else if (cmd.includes("harita") || cmd.includes("konum göster") || cmd.includes("nerede")) {
+                    let query = cmd.replace(/.*haritada\s*/i, '').replace(/.*konum göster\s*/i, '').replace(/.*nerede\s*/i, '').replace(/\s*haritası.*/i, '').trim();
+                    if (query) {
+                        window.open(`https://www.google.com/maps/search/${encodeURIComponent(query)}`, '_blank');
+                        response = `Bay Lewzon, Google Haritalar üzerinde "${query}" konumu taranıyor.`;
+                    } else {
+                        window.open('https://maps.google.com', '_blank');
+                        response = `Bay Lewzon, uydu harita görünümü açılıyor.`;
+                    }
+                }
+                else if (cmd.includes("parti") || cmd.includes("disco") || cmd.includes("eğlence")) {
+                    currentSystemMode = 'party';
+                    document.body.className = "party-mode";
+                    setReactorState('party');
+                    response = `Parti protokolü aktif ${title}! RGB neon ışıklar ve eğlence modu açıldı!`;
+                }
+                else if (cmd.includes("matrix") || cmd.includes("hacker")) {
+                    currentSystemMode = 'matrix';
+                    document.body.className = "matrix-mode";
+                    setReactorState('idle');
+                    response = `Matrix protokolü devreye sokuldu ${title}. Siber sisteme bağlandınız.`;
+                }
+                else if (cmd.includes("espri") || cmd.includes("şaka") || cmd.includes("güldür")) {
+                    const randomJoke = jokes[Math.floor(Math.random() * jokes.length)];
+                    response = `${title}, sizin için bir tane buldum: ${randomJoke}`;
+                }
+                else if (cmd.startsWith("not et") || cmd.startsWith("not al") || cmd.startsWith("şunu kaydet") || cmd.startsWith("kaydet")) {
+                    let noteContent = cmd.replace(/^(not et|not al|şunu kaydet|kaydet)/i, "").trim();
+                    if (noteContent.length > 0) {
+                        saveNoteToMemory(noteContent);
+                        response = `Notunuz hafızaya kaydedildi ${title}: "${noteContent}"`;
+                    } else {
+                        response = `Kaydedilecek not içeriğini belirtmelisiniz ${title}.`;
+                    }
+                } else if (cmd.includes("notlarımı oku") || cmd.includes("notları oku") || cmd.includes("notlar ne") || cmd.includes("hafızayı oku")) {
+                    const notes = getStoredNotes();
+                    if (notes.length === 0) {
+                        response = `Hafızanızda kayıtlı hiç not bulunmuyor ${title}.`;
+                    } else {
+                        response = `Sistem hafızanızda ${notes.length} not bulunuyor. Okuyorum: ` + notes.map((n, i) => `${i + 1}. not: ${n.text}`).join(". ");
+                    }
+                } else if (cmd.includes("notları sil") || cmd.includes("hafızayı temizle") || cmd.includes("notları temizle")) {
+                    clearAllMemoryNotes();
+                    response = `Tüm sistem hafızası ve notlar temizlendi ${title}.`;
+                }
+                else if (cmd.includes("şarj") || cmd.includes("batarya") || cmd.includes("pil")) {
+                    const chargeState = isBatteryCharging ? "ve şu anda şarj ediliyor" : "pil modunda çalışıyor";
+                    response = `Çekirdek gücünüz şu anda yüzde ${currentBatteryLevel} ${chargeState} ${title}.`;
+                } else if (cmd.includes("bağlantı") || cmd.includes("ağ") || cmd.includes("internet")) {
+                    const netState = navigator.onLine ? "çevrimiçi ve stabil" : "çevrimdışı";
+                    response = `Şebeke bağlantınız şu anda ${netState} ${title}.`;
+                } else if (cmd.includes("ortam sesi") || cmd.includes("müzik") || cmd.includes("sesi aç")) {
+                    toggleAmbientSound();
+                    return;
+                } else if (cmd.includes("saat")) {
+                    const now = new Date();
+                    response = `Şu an saat ${now.getHours()} : ${now.getMinutes()} ${title}.`;
+                } else if (cmd.includes("tarih") || cmd.includes("gün")) {
+                    const now = new Date();
+                    response = `Bugün ${now.toLocaleDateString('tr-TR')} ${title}.`;
+                } else if (cmd.includes("lewzon") || cmd.includes("bay lewzon kimdir")) {
+                    response = "Bay Lewzon, bu sistemin baş geliştiricisi ve komutanıdır.";
+                } else if (cmd.includes("kimsin") || cmd.includes("adın ne")) {
+                    response = `Ben JARVIS. ${title} için özelleştirilmiş yapay zeka asistanıyım.`;
+                } else if (cmd.includes("durum") || cmd.includes("sistem")) {
+                    response = `Tüm çekirdekler kararlı ${title}. Batarya yüzde ${currentBatteryLevel}. Tehdit algılanmadı.`;
+                } else if (cmd.includes("kırmızı alarm") || cmd.includes("alarm")) {
+                    currentSystemMode = 'alarm';
+                    document.body.className = "alarm-mode";
+                    document.getElementById("sys-status").innerText = "ALARM ACTIVE";
+                    document.getElementById("sys-status").style.color = "#ff003c";
+                    setReactorState('alarm');
+                    playBeep(440, 'sawtooth', 0.3);
+                    response = `Kırmızı alarm protokolü aktif edildi ${title}! Savunma kalkanları açıldı!`;
+                } else if (cmd.includes("gizlilik") || cmd.includes("stealth")) {
+                    currentSystemMode = 'stealth';
+                    document.body.className = "stealth-mode";
+                    document.getElementById("sys-status").innerText = "STEALTH MODE";
+                    document.getElementById("sys-status").style.color = "#00ff66";
+                    setReactorState('stealth');
+                    response = `Gizlilik modu aktif ${title}. Radar görünmezliği sağlandı.`;
+                } else if (cmd.includes("normal mod") || cmd.includes("sıfırla") || cmd.includes("normal")) {
+                    currentSystemMode = 'idle';
+                    document.body.className = "";
+                    document.getElementById("sys-status").innerText = navigator.onLine ? "ONLINE" : "OFFLINE";
+                    document.getElementById("sys-status").style.color = navigator.onLine ? "#00ff66" : "#ff003c";
+                    setReactorState('idle');
+                    response = `Sistem standart moduna sıfırlandı ${title}.`;
+                } else if (cmd.includes("kendi kendini imha") || cmd.includes("imha") || cmd.includes("imha et")) {
+                    currentSystemMode = 'alarm';
+                    document.body.className = "alarm-mode";
+                    setReactorState('alarm');
+                    response = `Kendi kendini imha dizilimi başlatıldı ${title}! 5 saniye içinde tahliye olun!`;
+
+                    speak(response, () => {
+                        let count = 5;
+                        const timer = setInterval(() => {
+                            playBeep(600, 'sawtooth', 0.2);
+                            addLog('SİSTEM', `İMHA İÇİN SON ${count} SANİYE...`);
+                            count--;
+
+                            if (count < 0) {
+                                clearInterval(timer);
+                                playExplosionSound();
+
+                                const overlay = document.getElementById('reboot-overlay');
+                                const bar = document.getElementById('reboot-bar');
+                                overlay.style.display = 'flex';
+
+                                let progress = 0;
+                                const rebootTimer = setInterval(() => {
+                                    progress += 5;
+                                    bar.style.width = progress + "%";
+                                    if (progress >= 100) {
+                                        clearInterval(rebootTimer);
+                                        overlay.style.display = 'none';
+                                        bar.style.width = "0%";
+                                        document.body.className = "";
+                                        document.getElementById('terminal').innerHTML = "";
+                                        currentSystemMode = 'idle';
+                                        setReactorState('idle');
+                                        const rebootMsg = "Yeniden başlatma tamamlandı Bay Lewzon. Bütün sistemler stabilize edildi.";
+                                        addLog('JARVIS', rebootMsg);
+                                        speak(rebootMsg);
+                                    }
+                                }, 150);
+                            }
+                        }, 1000);
+                    });
+                    addLog('JARVIS', response);
+                    return;
+                } else if (cmd.includes("temizle")) {
+                    document.getElementById('terminal').innerHTML = "";
+                    response = `Terminal ekranı temizlendi ${title}.`;
+                } else {
+                    // Tanınmayan komut: yapay zeka açıksa Gemini'ye sor
+                    if (aiEnabled) { askJarvis(command); return; }
+                    response = `Komut anlaşılamadı ${title}: "${command}".`;
+                }
+            }
+
+            addLog('JARVIS', response);
+            speak(response);
+        }
+
+        function sendTextCommand() {
+            const input = document.getElementById('user-input');
+            if (input.value.trim() !== "") {
+                processCommand(input.value);
+                input.value = "";
+            }
+        }
+
+        // MİKROFON VE SES TANIMA
+        let recognition = null;
+        let isListening = false;
+
+        function initSpeech() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.lang = 'tr-TR';
+                recognition.continuous = false;
+                recognition.interimResults = false;
+
+                recognition.onstart = function() {
+                    isListening = true;
+                    setReactorState('listening');
+                    updateMicUI();
+                };
+
+                recognition.onresult = function(event) {
+                    const text = event.results[0][0].transcript;
+                    processCommand(text);
+                };
+
+                recognition.onerror = function(event) {
+                    console.log("Mikrofon Hatası:", event.error);
+                    isListening = false;
+                    setReactorState(currentSystemMode);
+                    updateMicUI();
+                };
+
+                recognition.onend = function() {
+                    // isSpeakingFlag: speak() başladığı andan bitişine kadar true,
+                    // böylece 150 ms'lik TTS başlangıç boşluğunda mikrofon yeniden açılmaz
+                    const isSpeakingNow = isSpeakingFlag || window.speechSynthesis.speaking || isElevenSpeaking;
+                    if (isListening && !isSpeakingNow) {
+                        setTimeout(() => {
+                            if (isListening && !isSpeakingFlag) {
+                                try { recognition.start(); } catch(e){}
+                            }
+                        }, 200);
+                    } else if (!isListening && !isSpeakingNow) {
+                        setReactorState(currentSystemMode);
+                        updateMicUI();
+                    }
+                };
+            }
+        }
+
+        function updateMicUI() {
+            const micBtn = document.getElementById('mic-btn');
+            micBtn.innerText = isListening ? "DURDUR" : "DİNLE";
+        }
+
+        function toggleListening() {
+            unlockAudio();
+            if (!recognition) initSpeech();
+            if (!recognition) {
+                alert("Tarayıcınız ses tanımayı desteklemiyor.");
+                return;
+            }
+
+            if (!isListening) {
+                isListening = true;
+                playBeep(900, 'sine', 0.1);
+                try {
+                    recognition.start();
+                } catch(e) {}
+                updateMicUI();
+            } else {
+                isListening = false;
+                playBeep(400, 'sine', 0.1);
+                try {
+                    recognition.stop();
+                } catch(e) {}
+                setReactorState(currentSystemMode);
+                updateMicUI();
+            }
+        }
+
+        // SİSTEM BAŞLATICI PROTOKOLLERİ
+        window.addEventListener('load', () => {
+            // Türkçe sesler geç yüklenebiliyor, listeyi önceden ısıt
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.getVoices();
+                window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+            }
+
+            initSpeech();
+            initBattery();
+            initNetworkMonitoring();
+            renderNotesUI();
+            fetchWeather();
+            initVisualizer();
+
+            if (elevenEnabled) {
+                setVoiceEngineLabel("ELEVENLABS (HAZIR)", "#00ff66");
+            } else {
+                setVoiceEngineLabel("TARAYICI", "#ffcc00");
+            }
+
+            if (aiEnabled) {
+                setAiEngineLabel("GEMINI (HAZIR)", "#00ff66");
+            } else {
+                setAiEngineLabel("KAPALI (KEY YOK)", "#ffcc00");
+            }
+        });
+    </script>
+</body>
+</html>
